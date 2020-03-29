@@ -2145,7 +2145,6 @@ static JSValue js_os_getcwd(JSContext *ctx, JSValueConst this_val,
     return make_string_error(ctx, buf, err);
 }
 
-#if !defined(_WIN32)
 
 static JSValue js_os_chdir(JSContext *ctx, JSValueConst this_val,
                            int argc, JSValueConst *argv)
@@ -2172,7 +2171,11 @@ static JSValue js_os_realpath(JSContext *ctx, JSValueConst this_val,
     path = JS_ToCString(ctx, argv[0]);
     if (!path)
         return JS_EXCEPTION;
+    #if defined(_WIN32)
+    res = _realpath(buf, path,PATH_MAX);
+    #else
     res = realpath(path, buf);
+    #endif
     JS_FreeCString(ctx, path);
     if (!res) {
         buf[0] = '\0';
@@ -2198,7 +2201,11 @@ static JSValue js_os_mkdir(JSContext *ctx, JSValueConst this_val,
     path = JS_ToCString(ctx, argv[0]);
     if (!path)
         return JS_EXCEPTION;
+    #if !defined(_WIN32)
     ret = js_get_errno(mkdir(path, mode));
+    #else
+    ret = js_get_errno(mkdir(path));
+    #endif
     JS_FreeCString(ctx, path);
     return JS_NewInt32(ctx, ret);
 }
@@ -2207,7 +2214,7 @@ static int64_t timespec_to_ms(const struct timespec *tv)
 {
     return (int64_t)tv->tv_sec * 1000 + (tv->tv_nsec / 1000000);
 }
-
+#if !defined(_WIN32)
 /* return [obj, errcode] */
 static JSValue js_os_stat(JSContext *ctx, JSValueConst this_val,
                           int argc, JSValueConst *argv, int is_lstat)
@@ -2328,6 +2335,7 @@ static JSValue js_os_readlink(JSContext *ctx, JSValueConst this_val,
     JS_FreeCString(ctx, path);
     return make_string_error(ctx, buf, err);
 }
+#endif
 
 /* return [array, errorcode] */
 static JSValue js_os_readdir(JSContext *ctx, JSValueConst this_val,
@@ -2400,7 +2408,7 @@ static JSValue js_os_utimes(JSContext *ctx, JSValueConst this_val,
     JS_FreeCString(ctx, path);
     return JS_NewInt32(ctx, ret);
 }
-
+#if !defined(_WIN32)
 /* exec(args[, options]) -> exitcode */
 static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
                           int argc, JSValueConst *argv)
@@ -2576,6 +2584,7 @@ static JSValue js_os_waitpid(JSContext *ctx, JSValueConst this_val,
                                  JS_PROP_C_W_E);
     return obj;
 }    
+#endif
 
 /* pipe() -> [read_fd, write_fd] or null if error */
 static JSValue js_os_pipe(JSContext *ctx, JSValueConst this_val,
@@ -2596,7 +2605,7 @@ static JSValue js_os_pipe(JSContext *ctx, JSValueConst this_val,
                                  JS_PROP_C_W_E);
     return obj;
 }
-
+#if !defined(_WIN32)
 /* kill(pid, sig) */
 static JSValue js_os_kill(JSContext *ctx, JSValueConst this_val,
                           int argc, JSValueConst *argv)
@@ -2610,6 +2619,8 @@ static JSValue js_os_kill(JSContext *ctx, JSValueConst this_val,
     ret = js_get_errno(kill(pid, sig));
     return JS_NewInt32(ctx, ret);
 }
+
+#endif
 
 /* sleep(delay_ms) */
 static JSValue js_os_sleep(JSContext *ctx, JSValueConst this_val,
@@ -2626,6 +2637,7 @@ static JSValue js_os_sleep(JSContext *ctx, JSValueConst this_val,
     ret = js_get_errno(nanosleep(&ts, NULL));
     return JS_NewInt32(ctx, ret);
 }
+
 
 /* dup(fd) */
 static JSValue js_os_dup(JSContext *ctx, JSValueConst this_val,
@@ -2653,7 +2665,6 @@ static JSValue js_os_dup2(JSContext *ctx, JSValueConst this_val,
     return JS_NewInt32(ctx, ret);
 }
 
-#endif /* !_WIN32 */
 
 #if defined(_WIN32)
 #define OS_PLATFORM "win32"
@@ -2715,10 +2726,13 @@ static const JSCFunctionListEntry js_os_funcs[] = {
     JS_CFUNC_DEF("clearTimeout", 1, js_os_clearTimeout ),
     JS_PROP_STRING_DEF("platform", OS_PLATFORM, 0 ),
     JS_CFUNC_DEF("getcwd", 0, js_os_getcwd ),
-#if !defined(_WIN32)
+
     JS_CFUNC_DEF("chdir", 0, js_os_chdir ),
+    #if !defined(_WIN32)
     JS_CFUNC_DEF("realpath", 1, js_os_realpath ),
+    #endif
     JS_CFUNC_DEF("mkdir", 1, js_os_mkdir ),
+    #if !defined(_WIN32)
     JS_CFUNC_MAGIC_DEF("stat", 1, js_os_stat, 0 ),
     JS_CFUNC_MAGIC_DEF("lstat", 1, js_os_stat, 1 ),
     /* st_mode constants */
@@ -2734,17 +2748,22 @@ static const JSCFunctionListEntry js_os_funcs[] = {
     OS_FLAG(S_ISUID),
     JS_CFUNC_DEF("symlink", 2, js_os_symlink ),
     JS_CFUNC_DEF("readlink", 1, js_os_readlink ),
+    #endif
     JS_CFUNC_DEF("readdir", 1, js_os_readdir ),
+    #if !defined(_WIN32)
     JS_CFUNC_DEF("utimes", 3, js_os_utimes ),
     JS_CFUNC_DEF("exec", 1, js_os_exec ),
     JS_CFUNC_DEF("waitpid", 2, js_os_waitpid ),
     OS_FLAG(WNOHANG),
+    #endif
+    #if !defined(_WIN32)
     JS_CFUNC_DEF("pipe", 0, js_os_pipe ),
     JS_CFUNC_DEF("kill", 2, js_os_kill ),
+    #endif
     JS_CFUNC_DEF("sleep", 1, js_os_sleep ),
     JS_CFUNC_DEF("dup", 1, js_os_dup ),
     JS_CFUNC_DEF("dup2", 2, js_os_dup2 ),
-#endif
+
 };
 
 static int js_os_init(JSContext *ctx, JSModuleDef *m)
