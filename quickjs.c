@@ -1635,7 +1635,11 @@ static const JSMallocFunctions def_malloc_funcs = {
     (size_t (*)(const void *))malloc_usable_size,
 #else
     /* change this to `NULL,` if compilation fails */
+#if defined(_WIN32)
+    NULL,
+#else
     malloc_usable_size,
+#endif
 #endif
 };
 
