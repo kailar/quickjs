@@ -26,13 +26,15 @@ ifeq ($(shell uname -s),Darwin)
 CONFIG_DARWIN=y
 endif
 # Windows cross compilation from Linux
-#CONFIG_WIN32=y
+CONFIG_WIN32=y
 # use link time optimization (smaller and faster executables but slower build)
-CONFIG_LTO=y
+# CONFIG_LTO=y
 # consider warnings as errors (for development)
 #CONFIG_WERROR=y
 # force 32 bit build for some utilities
-#CONFIG_M32=y
+# CONFIG_M32=y
+
+
 
 ifdef CONFIG_DARWIN
 # use clang instead of gcc
@@ -48,12 +50,14 @@ prefix=/usr/local
 # use address sanitizer
 #CONFIG_ASAN=y
 # include the code for BigInt/BigFloat/BigDecimal and math mode
-CONFIG_BIGNUM=y
+# CONFIG_BIGNUM=y
+
 
 OBJDIR=.obj
 
 ifdef CONFIG_WIN32
   CROSS_PREFIX=i686-w64-mingw32-
+  HOST_CC=i686-w64-mingw32-gcc
   EXE=.exe
 else
   CROSS_PREFIX=
@@ -81,7 +85,7 @@ ifdef CONFIG_CLANG
     endif
   endif
 else
-  HOST_CC=gcc
+  HOST_CC?=gcc
   CC=$(CROSS_PREFIX)gcc
   CFLAGS=-g -Wall -MMD -MF $(OBJDIR)/$(@F).d
   CFLAGS += -Wno-array-bounds -Wno-format-truncation
@@ -126,7 +130,7 @@ endif
 
 PROGS=qjs$(EXE) qjsc$(EXE) run-test262
 ifneq ($(CROSS_PREFIX),)
-QJSC_CC=gcc
+QJSC_CC=$(HOST_CC)
 QJSC=./host-qjsc
 PROGS+=$(QJSC)
 else
