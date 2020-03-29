@@ -619,6 +619,20 @@ static JSValue js_std_printenv(JSContext *ctx, JSValueConst this_val,
     JS_FreeCString(ctx, name);
     return 0;
 }
+static JSValue js_std_system(JSContext *ctx, JSValueConst this_val,
+                             int argc, JSValueConst *argv)
+{
+    const char *name;
+    int ret;
+
+    name = JS_ToCString(ctx, argv[0]);
+    if (!name)
+        return JS_EXCEPTION;
+    ret=system(name);
+    JS_FreeCString(ctx, name);
+    return JS_NewUint32(ctx,ret);
+}
+
 
 
 static JSValue js_std_gc(JSContext *ctx, JSValueConst this_val,
@@ -1377,6 +1391,7 @@ static const JSCFunctionListEntry js_std_funcs[] = {
     JS_CFUNC_DEF("getenv", 1, js_std_getenv),
     JS_CFUNC_DEF("setenv", 1, js_std_setenv),
     JS_CFUNC_DEF("printenv", 1, js_std_printenv),
+    JS_CFUNC_DEF("system", 1, js_std_system),
     JS_CFUNC_DEF("urlGet", 1, js_std_urlGet ),
     JS_CFUNC_DEF("loadFile", 1, js_std_loadFile ),
     JS_CFUNC_DEF("strerror", 1, js_std_strerror ),
