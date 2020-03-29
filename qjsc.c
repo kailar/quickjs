@@ -370,7 +370,9 @@ void help(void)
     exit(1);
 }
 
-#if defined(CONFIG_CC) && !defined(_WIN32)
+#if defined(CONFIG_CC) 
+
+#if !defined(_WIN32)
 
 int exec_cmd(char **argv)
 {
@@ -389,6 +391,7 @@ int exec_cmd(char **argv)
     }
     return WEXITSTATUS(status);
 }
+#endif
 
 static int output_executable(const char *out_filename, const char *cfilename,
                              BOOL use_lto, BOOL verbose, const char *exename)
@@ -439,14 +442,18 @@ static int output_executable(const char *out_filename, const char *cfilename,
     *arg++ = inc_dir;
     *arg++ = "-o";
     *arg++ = out_filename;
+     #if !defined(_WIN32)
     if (dynamic_export)
         *arg++ = "-rdynamic";
+    #endif    
     *arg++ = cfilename;
     snprintf(libjsname, sizeof(libjsname), "%s/libquickjs%s%s.a",
              lib_dir, bn_suffix, lto_suffix);
     *arg++ = libjsname;
+     #if !defined(_WIN32)
     *arg++ = "-lm";
     *arg++ = "-ldl";
+    #endif
     *arg = NULL;
     
     if (verbose) {
@@ -454,9 +461,29 @@ static int output_executable(const char *out_filename, const char *cfilename,
             printf("%s ", *arg);
         printf("\n");
     }
-    
+    #if !defined(_WIN32)
     ret = exec_cmd((char **)argv);
     unlink(cfilename);
+    #else
+    {
+        char buf[512];
+        void** p=argv;
+        int n=0;
+        while (*p)
+        {
+           n+=sprintf(buf+n,"%s ",*p++);
+        }
+        printf("buf:%s",buf);
+        
+        ret=system(buf);
+        remove(cfilename);
+        if(ret==0){
+            sprintf(buf,"strip %s",out_filename);
+            ret=system(buf);
+        }
+    }
+    
+    #endif
     return ret;
 }
 #else
