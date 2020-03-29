@@ -562,6 +562,65 @@ static JSValue js_std_getenv(JSContext *ctx, JSValueConst this_val,
         return JS_NewString(ctx, str);
 }
 
+static JSValue js_std_setenv(JSContext *ctx, JSValueConst this_val,
+                             int argc, JSValueConst *argv)
+{
+    const char *name, *value;
+    char buffer[256];
+    name = JS_ToCString(ctx, argv[0]);
+    if (!name)
+        return JS_EXCEPTION;
+
+    value = JS_ToCString(ctx, argv[1]);
+    if (!value)
+        return JS_EXCEPTION;
+
+    sprintf(buffer, "%s=%s", name, value);
+
+    putenv(buffer);
+    JS_FreeCString(ctx, value);
+    JS_FreeCString(ctx, name);
+    return 0;
+}
+static JSValue js_std_printenv(JSContext *ctx, JSValueConst this_val,
+                               int argc, JSValueConst *argv)
+{
+    extern char **environ;
+    const char *name;
+    register char **envp, *eval;
+    int len;
+
+    /* printenv */
+    if (argc == 0)
+    {
+        for (envp = environ; *envp; envp++)
+            puts(*envp);
+        return 0;
+    }
+    name = JS_ToCString(ctx, argv[0]);
+    if (!name)
+        return JS_EXCEPTION;
+
+    /* printenv varname */
+    len = strlen(name);
+    for (envp = environ; *envp; envp++)
+    {
+        if (name[0] == **envp && strncmp(*envp, name, len) == 0)
+        {
+            eval = *envp + len;
+            /* If the environment variable doesn't have an `=', ignore it. */
+            if (*eval == '=')
+            {
+                puts(eval + 1);
+                break;
+            }
+        }
+    }
+    JS_FreeCString(ctx, name);
+    return 0;
+}
+
+
 static JSValue js_std_gc(JSContext *ctx, JSValueConst this_val,
                          int argc, JSValueConst *argv)
 {
@@ -1315,7 +1374,9 @@ static const JSCFunctionListEntry js_std_funcs[] = {
     JS_CFUNC_DEF("gc", 0, js_std_gc ),
     JS_CFUNC_DEF("evalScript", 1, js_evalScript ),
     JS_CFUNC_DEF("loadScript", 1, js_loadScript ),
-    JS_CFUNC_DEF("getenv", 1, js_std_getenv ),
+    JS_CFUNC_DEF("getenv", 1, js_std_getenv),
+    JS_CFUNC_DEF("setenv", 1, js_std_setenv),
+    JS_CFUNC_DEF("printenv", 1, js_std_printenv),
     JS_CFUNC_DEF("urlGet", 1, js_std_urlGet ),
     JS_CFUNC_DEF("loadFile", 1, js_std_loadFile ),
     JS_CFUNC_DEF("strerror", 1, js_std_strerror ),
